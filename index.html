@@ -158,6 +158,7 @@ tr.selected td{background:var(--accent-light)}
     <th onclick="sortBy(8)" style="min-width:80px">Sexo <span id="s8"></span></th>
     <th onclick="sortBy(9)" style="min-width:55px">Edad <span id="s9"></span></th>
     <th onclick="sortBy(10)" style="min-width:80px">Coaching <span id="s10"></span></th>
+    <th onclick="sortBy(16)" style="min-width:80px">Menores <span id="s16"></span></th>
     <th onclick="sortBy(11)" style="min-width:130px">Corriente <span id="s11"></span></th>
     <th onclick="sortBy(12)" style="min-width:120px">Especialidad <span id="s12"></span></th>
     <th onclick="sortBy(13)" style="min-width:120px">Idiomas <span id="s13"></span></th>
@@ -210,6 +211,7 @@ tr.selected td{background:var(--accent-light)}
         <div class="frow"><label>Edad</label><input id="e-edad" type="number" placeholder="Edad"></div>
         <div class="frow"><label>Asignaciones</label><input id="e-asign" placeholder="Ej: Prioridad"></div>
       </div>
+      <div class="frow"><label>Menores</label><select id="e-menores"><option value="">—</option><option value="Sí">Sí</option><option value="No">No</option></select></div>
       <div class="frow"><label>Motivo de baneo</label><input id="e-ban" placeholder="Motivo..."></div>
       <div class="frow"><label>Comentario</label><textarea id="e-comment" placeholder="Notas internas..."></textarea></div>
       <button class="save-btn" id="save-btn" onclick="saveManual()">Guardar cambios</button>
@@ -308,10 +310,10 @@ tr.selected td{background:var(--accent-light)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script>
 var ALL = JSON.parse(document.getElementById('ps-data').textContent);
-var MANUAL = ['Pausa','Banned?','Assignment ON?','Sexo','Corriente','Especialidad','Comentario','Asignaciones manuales','Idiomas','Coaching','Edad','Motivo de baneo'];
+var MANUAL = ['Pausa','Banned?','Assignment ON?','Sexo','Corriente','Especialidad','Comentario','Asignaciones manuales','Idiomas','Coaching','Edad','Motivo de baneo','Menores'];
 var sortCol = 0, sortDir = 1, activePais = '', currentPS = null;
-var sortIds = ['s0','s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13','s14','s15'];
-var sortCols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Edad','Coaching','Corriente','Especialidad','Idiomas','Asignaciones manuales','Motivo de baneo'];
+var sortIds = ['s0','s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s16','s11','s12','s13','s14','s15'];
+var sortCols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Edad','Coaching','Corriente','Especialidad','Idiomas','Asignaciones manuales','Motivo de baneo','Menores'];
 var uploadedFiles = {ass:null,rank:null,extra:null};
 var extraData = [];
 var extraCols = [];
@@ -416,6 +418,7 @@ function render() {
     var corrienteVal = ps['Corriente']?'<span style="font-size:12px;color:#374151">'+ps['Corriente']+'</span>':'';
     var especialidadVal = ps['Especialidad']?'<span style="font-size:12px;color:#374151">'+String(ps['Especialidad']).substring(0,30)+'</span>':'';
     var edadVal = ps['Edad']||'';
+    var menoresVal = ps['Menores']==='Sí'?'<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px">Sí</span>':ps['Menores']==='No'?'<span style="background:#fee2e2;color:#dc2626;font-size:11px;padding:2px 7px;border-radius:20px">No</span>':ps['Menores']?'<span style="font-size:12px">'+ps['Menores']+'</span>':'';
     var coachingVal = ps['Coaching']==='Sí'?'<span style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px">Sí</span>':ps['Coaching']==='No'?'<span style="background:#fee2e2;color:#dc2626;font-size:11px;padding:2px 7px;border-radius:20px">No</span>':'';
     var asignVal = ps['Asignaciones manuales']?'<span style="font-size:12px;color:#b45309">'+ps['Asignaciones manuales']+'</span>':'';
     var motbanVal = ps['Motivo de baneo']?'<span style="font-size:12px;color:#dc2626">'+String(ps['Motivo de baneo']).substring(0,30)+'</span>':'';
@@ -432,6 +435,7 @@ function render() {
       '<td>'+sexoBadge+'</td>'+
       '<td style="text-align:center">'+edadVal+'</td>'+
       '<td>'+coachingVal+'</td>'+
+      '<td>'+menoresVal+'</td>'+
       '<td>'+corrienteVal+'</td>'+
       '<td>'+especialidadVal+'</td>'+
       '<td>'+idiomasBadge+'</td>'+
@@ -489,6 +493,7 @@ function openPanel(uuid) {
   document.getElementById('e-coaching').value=ps['Coaching']||'';
   document.getElementById('e-edad').value=ps['Edad']||'';
   document.getElementById('e-asign').value=ps['Asignaciones manuales']||'';
+  document.getElementById('e-menores').value=ps['Menores']||'';
   document.getElementById('e-ban').value=ps['Motivo de baneo']||'';
   document.getElementById('e-comment').value=ps['Comentario']||'';
   var btn=document.getElementById('save-btn');
@@ -511,6 +516,7 @@ function saveManual(){
   currentPS['Coaching']=document.getElementById('e-coaching').value;
   currentPS['Edad']=document.getElementById('e-edad').value;
   currentPS['Asignaciones manuales']=document.getElementById('e-asign').value;
+  currentPS['Menores']=document.getElementById('e-menores').value;
   currentPS['Motivo de baneo']=document.getElementById('e-ban').value;
   currentPS['Comentario']=document.getElementById('e-comment').value;
   saveToStorage();
@@ -601,7 +607,14 @@ function processUpload(){
           ALL.forEach(function(ps){
             var matchVal=String(ps[matchField]||'').trim();
             var match=extraMap[matchVal];
-            if(match) checkedCols.forEach(function(c){ if(match[c]!==undefined&&match[c]!=='') ps[c]=match[c]; });
+            if(match) checkedCols.forEach(function(c){
+              var val=match[c];
+              if(val!==undefined&&val!==''){
+                // Normalize column names from Overview Excel
+                var targetCol = c==='EDAD'?'Edad':c;
+                ps[targetCol]=val;
+              }
+            });
           });
         }
       }
@@ -639,7 +652,7 @@ function clearFilters() {
 function exportXLSX() {
   var res = filtered();
   if (!res.length) { alert('No hay datos para exportar.'); return; }
-  var cols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Corriente','Especialidad','Idiomas','Coaching','Edad','Asignaciones manuales','Motivo de baneo','Comentario','NPS Ther.','Rapport','W5','W10','Ther. uuid'];
+  var cols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Edad','Coaching','Menores','Corriente','Especialidad','Idiomas','Asignaciones manuales','Motivo de baneo','Comentario','NPS Ther.','Rapport','W5','W10','Ther. uuid'];
   var rows = [cols];
   res.forEach(function(ps) {
     rows.push(cols.map(function(c){ return ps[c]!==undefined?ps[c]:''; }));
