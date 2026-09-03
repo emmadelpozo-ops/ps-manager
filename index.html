@@ -625,7 +625,9 @@ function processUpload(){
         }
       }
       saveToStorage();
-      prog.textContent='✅ '+ALL.length+' psicólogos actualizados correctamente.';
+      // Debug: show first Assignment ON? value
+var debugVals = ALL.slice(0,3).map(function(p){ return p['Therapist'].split(' ')[0]+':'+p['Assignment ON?']+'('+typeof p['Assignment ON?']+')'; }).join(' | ');
+prog.textContent='✅ '+ALL.length+' PS. Debug Asign: '+debugVals;
       setTimeout(function(){closeUpload();render();},1500);
     });
   });
