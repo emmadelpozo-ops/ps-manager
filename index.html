@@ -105,11 +105,6 @@ tr.selected td{background:var(--accent-light)}
     <option value="banned">Baneados</option>
     <option value="paused">En pausa</option>
   </select>
-  <select id="f-assign" onchange="render()">
-    <option value="">Asignación</option>
-    <option value="1">SÍ</option>
-    <option value="0">NO</option>
-  </select>
   <select id="f-sexo" onchange="render()">
     <option value="">Sexo</option>
     <option value="Hombre">Hombre</option>
@@ -149,13 +144,12 @@ tr.selected td{background:var(--accent-light)}
   <tr>
     <th onclick="sortBy(0)" style="min-width:160px">Psicólogo <span id="s0"></span></th>
     <th onclick="sortBy(1)" style="min-width:80px">País <span id="s1"></span></th>
-    <th onclick="sortBy(2)" style="min-width:70px">Asign. <span id="s2"></span></th>
-    <th onclick="sortBy(3)" style="min-width:60px">Delta <span id="s3"></span></th>
-    <th onclick="sortBy(4)" style="min-width:80px">Ranking <span id="s4"></span></th>
-    <th onclick="sortBy(5)" style="min-width:65px">CR3 <span id="s5"></span></th>
-    <th onclick="sortBy(6)" style="min-width:80px">Estado <span id="s6"></span></th>
-    <th onclick="sortBy(7)" style="min-width:65px">Pausa <span id="s7"></span></th>
-    <th onclick="sortBy(8)" style="min-width:80px">Sexo <span id="s8"></span></th>
+    <th onclick="sortBy(2)" style="min-width:60px">Delta <span id="s3"></span></th>
+    <th onclick="sortBy(3)" style="min-width:80px">Ranking <span id="s4"></span></th>
+    <th onclick="sortBy(4)" style="min-width:65px">CR3 <span id="s5"></span></th>
+    <th onclick="sortBy(5)" style="min-width:80px">Estado <span id="s6"></span></th>
+    <th onclick="sortBy(6)" style="min-width:65px">Pausa <span id="s7"></span></th>
+    <th onclick="sortBy(7)" style="min-width:80px">Sexo <span id="s8"></span></th>
     <th onclick="sortBy(9)" style="min-width:55px">Edad <span id="s9"></span></th>
     <th onclick="sortBy(10)" style="min-width:80px">Coaching <span id="s10"></span></th>
     <th onclick="sortBy(16)" style="min-width:80px">Menores <span id="s16"></span></th>
@@ -192,9 +186,6 @@ tr.selected td{background:var(--accent-light)}
         <div class="frow"><label>Estado</label>
           <select id="e-banned"><option value="0">Activo</option><option value="1">Baneado</option></select>
         </div>
-      </div>
-      <div class="frow"><label>Asignación (ON/OFF)</label>
-        <select id="e-assign-on"><option value="1">SÍ</option><option value="0">NO</option></select>
       </div>
       <div class="frow"><label>Sexo</label>
         <select id="e-sexo"><option value="">—</option><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option><option value="No binario">No binario</option></select>
@@ -306,11 +297,11 @@ tr.selected td{background:var(--accent-light)}
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script>
 var ALL = JSON.parse(document.getElementById('ps-data').textContent);
-var MANUAL = ['Pausa','Banned?','Assignment ON?','Sexo','Corriente','Especialidad','Comentario','Asignaciones manuales','Idiomas','Coaching','Edad','Motivo de baneo','Menores'];
+var MANUAL = ['Pausa','Banned?','Sexo','Corriente','Especialidad','Comentario','Asignaciones manuales','Idiomas','Coaching','Edad','Motivo de baneo','Menores'];
 var sortCol = 0, sortDir = 1, activePais = '', currentPS = null;
 
 function isON(val) {
@@ -321,7 +312,7 @@ function isON(val) {
   var n = parseFloat(s);
   return !isNaN(n) && n !== 0;
 }
-var sortIds = ['s0','s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s16','s11','s12','s13','s14','s15'];
+var sortIds = ['s0','s1','s3','s4','s5','s6','s7','s8','s9','s10','s16','s11','s12','s13','s14','s15'];
 var sortCols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Edad','Coaching','Corriente','Especialidad','Idiomas','Asignaciones manuales','Motivo de baneo','Menores'];
 var uploadedFiles = {ass:null,rank:null,extra:null};
 var extraData = [];
@@ -361,7 +352,6 @@ function fmt(v){ return (v===''||v===null||v===undefined)?'—':v; }
 function filtered() {
   var q = document.getElementById('search').value.trim().toLowerCase();
   var fs = document.getElementById('f-status').value;
-  var fa = document.getElementById('f-assign').value;
   var fsexo = document.getElementById('f-sexo').value;
   var fcoach = document.getElementById('f-coaching').value;
   var fcorriente = document.getElementById('f-corriente').value.trim().toLowerCase();
@@ -372,8 +362,7 @@ function filtered() {
     if (fs==='active' && (ps['Banned?']==1||ps['Pausa']==1)) return false;
     if (fs==='banned' && ps['Banned?']!=1) return false;
     if (fs==='paused' && ps['Pausa']!=1) return false;
-    if (fa!=='' && (fa==='1'?!isON(ps['Assignment ON?']):isON(ps['Assignment ON?']))) return false;
-    if (fsexo && (ps['Sexo']||'')!==fsexo) return false;
+      if (fsexo && (ps['Sexo']||'')!==fsexo) return false;
     if (fcoach && (ps['Coaching']||'')!==fcoach) return false;
     if (fcorriente && !(ps['Corriente']||'').toLowerCase().includes(fcorriente)) return false;
     if (fespecialidad && !(ps['Especialidad']||'').toLowerCase().includes(fespecialidad)) return false;
@@ -435,7 +424,6 @@ function render() {
     return '<tr class="'+sel+'" data-uuid="'+ps['Ther. uuid']+'" onclick="openPanel(this.dataset.uuid)">'+
       '<td style="font-weight:500">'+fmt(ps['Therapist'])+'</td>'+
       '<td>'+(flags[ps['Pais']]||'')+' '+fmt(ps['Pais'])+'</td>'+
-      '<td>'+asgn+'</td>'+
       '<td style="text-align:center">'+fmt(ps['Delta (real)'])+'</td>'+
       '<td style="text-align:center">'+ptj+'</td>'+
       '<td style="text-align:center">'+cr3+'</td>'+
@@ -494,7 +482,6 @@ function openPanel(uuid) {
   document.getElementById('p-url').href=ps['URL']||'#';
   document.getElementById('e-pausa').value=ps['Pausa']==1||ps['Pausa']==='1'?'1':'0';
   document.getElementById('e-banned').value=ps['Banned?']==1||ps['Banned?']==='1'?'1':'0';
-  document.getElementById('e-assign-on').value=isON(ps['Assignment ON?'])?'1':'0';
   document.getElementById('e-sexo').value=ps['Sexo']||'';
   document.getElementById('e-corriente').value=ps['Corriente']||'';
   document.getElementById('e-especialidad').value=ps['Especialidad']||'';
@@ -517,7 +504,6 @@ function saveManual(){
   if(!currentPS) return;
   currentPS['Pausa']=document.getElementById('e-pausa').value;
   currentPS['Banned?']=document.getElementById('e-banned').value;
-  currentPS['Assignment ON?']=document.getElementById('e-assign-on').value;
   currentPS['Sexo']=document.getElementById('e-sexo').value;
   currentPS['Corriente']=document.getElementById('e-corriente').value;
   currentPS['Especialidad']=document.getElementById('e-especialidad').value;
@@ -579,11 +565,16 @@ function processUpload(){
   readXLSX(uploadedFiles.ass,function(assData){
     prog.textContent='Procesando Ranking...';
     readXLSX(uploadedFiles.rank,function(rankData){
-      // Pre-process assData to fix Assignment ON?
+      // Pre-process assData to fix Assignment ON? and Banned?
       assData.forEach(function(r){
+        // Assignment ON?
         var v=r['Assignment ON?'];
-        var n=Number(v);
-        r['Assignment ON?']=(v===1||v===true||String(v).trim()==='1'||String(v).trim()==='1.0'||(!isNaN(n)&&n===1))?1:0;
+        var vv=(v===null||v===undefined)?'':v;
+        r['Assignment ON?']=(vv===1||vv===true||String(vv).trim()==='1'||String(vv).trim()==='1.0')?1:0;
+        // Banned?
+        var b=r['Banned?'];
+        var bb=(b===null||b===undefined)?'':b;
+        r['Banned?']=(bb===1||bb===true||String(bb).trim()==='1'||String(bb).trim()==='1.0')?1:0;
       });
       prog.textContent='Cruzando datos y conservando campos manuales...';
       var cmap={es:'ESP',mx:'MX',gb:'UK',en:'UK',pt:'PT/BR',br:'PT/BR',it:'ITA'};
@@ -594,6 +585,8 @@ function processUpload(){
         var u=String(ps['Ther. uuid']||'').trim(); if(!u) return; manualSaved[u]={};
         MANUAL.forEach(function(k){ manualSaved[u][k]=ps[k]; });
       });
+      // Only keep PS that exist in Ass_settings (base source of truth)
+      var assUUIDs={}; assData.forEach(function(r){ if(r['Ther. uuid']) assUUIDs[String(r['Ther. uuid']).trim()]=true; });
       ALL=assData.filter(function(r){return r['Ther. uuid'];}).map(function(r){
         var uuid=r['Ther. uuid'];
         var rk=rankMap[uuid]||{};
@@ -609,20 +602,9 @@ function processUpload(){
         var uuid_clean=String(uuid||'').trim();
         var m=manualSaved[uuid_clean]||{};
         MANUAL.forEach(function(k){ ps[k]=m[k]!==undefined?m[k]:''; });
-        // Force normalize - try every possible format
-        var aon=ps['Assignment ON?'];
-        var aonStr=String(aon===null||aon===undefined?'':aon).trim();
-        var aonNum=Number(aon);
-        // Check all possible truthy values
-        if(aon===1||aon===true||aonStr==='1'||aonStr==='1.0'||aonStr.toLowerCase()==='true'||aonStr.toLowerCase()==='yes'||aonStr.toLowerCase()==='on'||aonStr.toLowerCase()==='sí'||(!isNaN(aonNum)&&aonNum>0&&aonNum<=1)){
-          ps['Assignment ON?']=1;
-        } else {
-          ps['Assignment ON?']=0;
-        }
-        var banned=ps['Banned?'];
-        var bannedStr=String(banned===null||banned===undefined?'':banned).trim();
-        if(banned===1||banned===true||bannedStr==='1'||bannedStr==='1.0'||bannedStr.toLowerCase()==='true') ps['Banned?']=1;
-        else ps['Banned?']=0;
+        // Already normalized in pre-process step above, just keep as is
+        if(ps['Assignment ON?']!==1) ps['Assignment ON?']=0;
+        if(ps['Banned?']!==1) ps['Banned?']=0;
         return ps;
       });
       // Apply extra Excel if provided
@@ -657,9 +639,29 @@ function processUpload(){
 function readXLSX(file,cb){
   var reader=new FileReader();
   reader.onload=function(e){
-    var wb=XLSX.read(e.target.result,{type:'array',cellNF:false,raw:false});
+    var wb=XLSX.read(e.target.result,{type:'array',cellDates:false,cellNF:false,cellText:false});
     var ws=wb.Sheets[wb.SheetNames[0]];
-    var data=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
+    // Use header row to get column names
+    var ref=ws['!ref'];
+    var range=XLSX.utils.decode_range(ref);
+    // Read header row
+    var headers={};
+    for(var C=range.s.c;C<=range.e.c;C++){
+      var hcell=ws[XLSX.utils.encode_cell({r:range.s.r,c:C})];
+      if(hcell&&hcell.v!==undefined) headers[C]=String(hcell.v);
+    }
+    // Build data array reading raw .v values
+    var data=[];
+    for(var R=range.s.r+1;R<=range.e.r;R++){
+      var row={};
+      for(var CC=range.s.c;CC<=range.e.c;CC++){
+        var hname=headers[CC];
+        if(!hname) continue;
+        var cell=ws[XLSX.utils.encode_cell({r:R,c:CC})];
+        row[hname]=cell?cell.v:'';
+      }
+      data.push(row);
+    }
     cb(data);
   };
   reader.readAsArrayBuffer(file);
@@ -670,7 +672,6 @@ function readXLSX(file,cb){
 function clearFilters() {
   document.getElementById('search').value='';
   document.getElementById('f-status').value='';
-  document.getElementById('f-assign').value='';
   document.getElementById('f-sexo').value='';
   document.getElementById('f-coaching').value='';
   document.getElementById('f-corriente').value='';
