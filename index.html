@@ -27,7 +27,7 @@ select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-si
 .main-area{flex:1;min-width:0;padding:16px 20px}
 .table-wrap{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:auto}
 table{width:100%;border-collapse:collapse;min-width:860px}
-th{background:var(--surface2);padding:9px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;cursor:pointer;user-select:none;border-bottom:1px solid var(--border)}
+th{background:var(--surface2);padding:9px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
 th:hover{color:var(--text2)}
 td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
 tr:last-child td{border-bottom:none}
@@ -145,17 +145,27 @@ tr.selected td{background:var(--accent-light)}
 <div class="main-area">
 <div class="table-wrap">
 <table>
-  <thead><tr>
-    <th onclick="sortBy('Therapist')">Psicólogo <span id="s0"></span></th>
-    <th onclick="sortBy('Pais')">País <span id="s1"></span></th>
-    <th onclick="sortBy('Assignment ON?')">Asign. <span id="s2"></span></th>
-    <th onclick="sortBy('Delta (real)')">Delta <span id="s3"></span></th>
-    <th onclick="sortBy('Puntaje Total')">Ranking <span id="s4"></span></th>
-    <th onclick="sortBy('CR3 (%)')">CR3 <span id="s5"></span></th>
-    <th onclick="sortBy('Banned?')">Estado <span id="s6"></span></th>
-    <th onclick="sortBy('Pausa')">Pausa <span id="s7"></span></th>
-    <th>Comentario</th>
-  </tr></thead>
+  <thead>
+  <tr>
+    <th onclick="sortBy(0)" style="min-width:160px">Psicólogo <span id="s0"></span></th>
+    <th onclick="sortBy(1)" style="min-width:80px">País <span id="s1"></span></th>
+    <th onclick="sortBy(2)" style="min-width:70px">Asign. <span id="s2"></span></th>
+    <th onclick="sortBy(3)" style="min-width:60px">Delta <span id="s3"></span></th>
+    <th onclick="sortBy(4)" style="min-width:80px">Ranking <span id="s4"></span></th>
+    <th onclick="sortBy(5)" style="min-width:65px">CR3 <span id="s5"></span></th>
+    <th onclick="sortBy(6)" style="min-width:80px">Estado <span id="s6"></span></th>
+    <th onclick="sortBy(7)" style="min-width:65px">Pausa <span id="s7"></span></th>
+    <th onclick="sortBy(8)" style="min-width:80px">Sexo <span id="s8"></span></th>
+    <th onclick="sortBy(9)" style="min-width:55px">Edad <span id="s9"></span></th>
+    <th onclick="sortBy(10)" style="min-width:80px">Coaching <span id="s10"></span></th>
+    <th onclick="sortBy(11)" style="min-width:130px">Corriente <span id="s11"></span></th>
+    <th onclick="sortBy(12)" style="min-width:120px">Especialidad <span id="s12"></span></th>
+    <th onclick="sortBy(13)" style="min-width:120px">Idiomas <span id="s13"></span></th>
+    <th onclick="sortBy(14)" style="min-width:110px">Asignaciones <span id="s14"></span></th>
+    <th onclick="sortBy(15)" style="min-width:110px">Motivo baneo <span id="s15"></span></th>
+    <th style="min-width:160px">Comentario</th>
+  </tr>
+</thead>
   <tbody id="tbody"></tbody>
 </table>
 <div class="no-results" id="no-results" style="display:none">Sin resultados.</div>
@@ -366,14 +376,21 @@ function render() {
     var cr3=ps['CR3 (%)']!==''?(parseFloat(ps['CR3 (%)'])*100).toFixed(0)+'%':'—';
     var ptj=ps['Puntaje Total']!==''?(parseFloat(ps['Puntaje Total'])*100).toFixed(0)+'%':'—';
     var com=ps['Comentario']?'<span style="color:var(--text2);font-size:12px">'+String(ps['Comentario']).substring(0,45)+(String(ps['Comentario']).length>45?'…':'')+'</span>':'';
-    var sexo=fmt(ps['Sexo']);
-    var corriente=ps['Corriente']?'<span style="font-size:12px">'+ps['Corriente']+'</span>':'';
-    var especialidad=ps['Especialidad']?'<span style="font-size:12px">'+String(ps['Especialidad']).substring(0,25)+'</span>':'';
-    var idiomas=ps['Idiomas']?'<span style="font-size:12px">'+ps['Idiomas']+'</span>':'';
-    var coaching=ps['Coaching']?'<span class="badge '+(ps['Coaching']==='Sí'?'b-on':'b-neutral')+'">'+ps['Coaching']+'</span>':'';
-    var edad=ps['Edad']?ps['Edad']:'';
-    var asign=ps['Asignaciones manuales']?'<span style="font-size:12px;color:#b45309">'+ps['Asignaciones manuales']+'</span>':'';
-    var motban=ps['Motivo de baneo']?'<span style="font-size:12px;color:#dc2626">'+String(ps['Motivo de baneo']).substring(0,30)+'</span>':'';
+    // Sexo badge
+    var sexoVal = ps['Sexo']||'';
+    var sexoBadge = sexoVal==='Hombre'?'<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px">Hombre</span>':sexoVal==='Mujer'?'<span style="background:#fce7f3;color:#be185d;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px">Mujer</span>':sexoVal?'<span style="background:#f0fdf4;color:#15803d;font-size:11px;padding:2px 8px;border-radius:20px">'+sexoVal+'</span>':'';
+    // Idiomas badges with colors
+    var idiomasVal = ps['Idiomas']||'';
+    var idiomaColors = {'inglés':'#d1fae5|#065f46','ingles':'#d1fae5|#065f46','english':'#d1fae5|#065f46','árabe':'#fef3c7|#92400e','arabe':'#fef3c7|#92400e','arabic':'#fef3c7|#92400e','francés':'#ede9fe|#5b21b6','frances':'#ede9fe|#5b21b6','french':'#ede9fe|#5b21b6','alemán':'#fee2e2|#991b1b','aleman':'#fee2e2|#991b1b','german':'#fee2e2|#991b1b','portugués':'#ffedd5|#9a3412','portugues':'#ffedd5|#9a3412','italian':'#fce7f3|#9d174d','italiano':'#fce7f3|#9d174d','catalán':'#e0f2fe|#0c4a6e','catalan':'#e0f2fe|#0c4a6e','euskera':'#d1fae5|#064e3b','gallego':'#fef9c3|#713f12'};
+    var idiomasBadge = idiomasVal ? idiomasVal.split(/[,;]+/).map(function(i){var k=i.trim().toLowerCase();var c=idiomaColors[k]||'#f0efe9|#4b5563';var parts=c.split('|');return '<span style="background:'+parts[0]+';color:'+parts[1]+';font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px;margin-right:3px">'+i.trim()+'</span>';}).join('') : '';
+    // Other fields
+    var corrienteVal = ps['Corriente']?'<span style="font-size:12px;color:#374151">'+ps['Corriente']+'</span>':'';
+    var especialidadVal = ps['Especialidad']?'<span style="font-size:12px;color:#374151">'+String(ps['Especialidad']).substring(0,30)+'</span>':'';
+    var edadVal = ps['Edad']||'';
+    var coachingVal = ps['Coaching']==='Sí'?'<span style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px">Sí</span>':ps['Coaching']==='No'?'<span style="background:#fee2e2;color:#dc2626;font-size:11px;padding:2px 7px;border-radius:20px">No</span>':'';
+    var asignVal = ps['Asignaciones manuales']?'<span style="font-size:12px;color:#b45309">'+ps['Asignaciones manuales']+'</span>':'';
+    var motbanVal = ps['Motivo de baneo']?'<span style="font-size:12px;color:#dc2626">'+String(ps['Motivo de baneo']).substring(0,30)+'</span>':'';
+    var comVal = ps['Comentario']?'<span style="font-size:12px;color:#6b6a65">'+String(ps['Comentario']).substring(0,50)+(String(ps['Comentario']).length>50?'…':'')+'</span>':'';
     return '<tr class="'+sel+'" data-uuid="'+ps['Ther. uuid']+'" onclick="openPanel(this.dataset.uuid)">'+
       '<td style="font-weight:500">'+fmt(ps['Therapist'])+'</td>'+
       '<td>'+(flags[ps['Pais']]||'')+' '+fmt(ps['Pais'])+'</td>'+
@@ -383,15 +400,15 @@ function render() {
       '<td style="text-align:center">'+cr3+'</td>'+
       '<td>'+estado+'</td>'+
       '<td>'+pausa+'</td>'+
-      '<td>'+sexo+'</td>'+
-      '<td style="text-align:center">'+edad+'</td>'+
-      '<td>'+coaching+'</td>'+
-      '<td>'+corriente+'</td>'+
-      '<td>'+especialidad+'</td>'+
-      '<td>'+idiomas+'</td>'+
-      '<td>'+asign+'</td>'+
-      '<td>'+motban+'</td>'+
-      '<td>'+com+'</td>'+
+      '<td>'+sexoBadge+'</td>'+
+      '<td style="text-align:center">'+edadVal+'</td>'+
+      '<td>'+coachingVal+'</td>'+
+      '<td>'+corrienteVal+'</td>'+
+      '<td>'+especialidadVal+'</td>'+
+      '<td>'+idiomasBadge+'</td>'+
+      '<td>'+asignVal+'</td>'+
+      '<td>'+motbanVal+'</td>'+
+      '<td>'+comVal+'</td>'+
     '</tr>';
   }).join('');
 }
