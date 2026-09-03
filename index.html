@@ -110,6 +110,24 @@ tr.selected td{background:var(--accent-light)}
     <option value="1">ON</option>
     <option value="0">OFF</option>
   </select>
+  <select id="f-sexo" onchange="render()">
+    <option value="">Sexo</option>
+    <option value="Hombre">Hombre</option>
+    <option value="Mujer">Mujer</option>
+    <option value="No binario">No binario</option>
+  </select>
+  <select id="f-coaching" onchange="render()">
+    <option value="">Coaching</option>
+    <option value="Sí">Sí</option>
+    <option value="No">No</option>
+  </select>
+  <input id="f-corriente" type="text" placeholder="Corriente..." style="padding:6px 10px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:130px;outline:none" oninput="render()">
+  <input id="f-especialidad" type="text" placeholder="Especialidad..." style="padding:6px 10px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:130px;outline:none" oninput="render()">
+  <input id="f-idiomas" type="text" placeholder="Idioma..." style="padding:6px 10px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:110px;outline:none" oninput="render()">
+  <input id="f-edad-min" type="number" placeholder="Edad min" style="padding:6px 8px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:80px;outline:none" oninput="render()">
+  <input id="f-edad-max" type="number" placeholder="Edad max" style="padding:6px 8px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:80px;outline:none" oninput="render()">
+  <button onclick="clearFilters()" style="background:#f0efe9;color:#666;border:1px solid #e2e0d8;padding:7px 12px;border-radius:6px;font-size:13px;cursor:pointer;white-space:nowrap">✕ Limpiar</button>
+  <button onclick="exportXLSX()" style="background:#16a34a;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">⬇ Exportar Excel</button>
   <div class="hdr-right">
     <span class="count-badge" id="count-badge"></span>
     <button class="upload-btn" onclick="openUpload()">⬆ Actualizar PBI</button>
@@ -162,9 +180,12 @@ tr.selected td{background:var(--accent-light)}
         <div class="frow"><label>Pausa</label>
           <select id="e-pausa"><option value="0">No</option><option value="1">Sí</option></select>
         </div>
-        <div class="frow"><label>Sexo</label>
-          <select id="e-sexo"><option value="">—</option><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option><option value="No binario">No binario</option></select>
+        <div class="frow"><label>Estado</label>
+          <select id="e-banned"><option value="0">Activo</option><option value="1">Baneado</option></select>
         </div>
+      </div>
+      <div class="frow"><label>Sexo</label>
+        <select id="e-sexo"><option value="">—</option><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option><option value="No binario">No binario</option></select>
       </div>
       <div class="frow"><label>Corriente</label><input id="e-corriente" placeholder="Ej: Cognitivo-conductual"></div>
       <div class="frow"><label>Especialidad</label><input id="e-especialidad" placeholder="Ej: Ansiedad, Coaching..."></div>
@@ -247,12 +268,13 @@ tr.selected td{background:var(--accent-light)}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script>
 var ALL = JSON.parse(document.getElementById('ps-data').textContent);
-var MANUAL = ['Pausa','Sexo','Corriente','Especialidad','Comentario','Asignaciones manuales','Idiomas','Coaching','Edad','Motivo de baneo'];
+var MANUAL = ['Pausa','Banned?','Sexo','Corriente','Especialidad','Comentario','Asignaciones manuales','Idiomas','Coaching','Edad','Motivo de baneo'];
 var sortCol = null, sortDir = 1, activePais = '', currentPS = null;
-var sortIds = ['s0','s1','s2','s3','s4','s5','s6','s7'];
-var sortCols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa'];
+var sortIds = ['s0','s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13','s14','s15'];
+var sortCols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Corriente','Especialidad','Idiomas','Coaching','Edad','Asignaciones manuales','Motivo de baneo'];
 var uploadedFiles = {ass:null,rank:null};
 
 function loadSaved() {
@@ -290,12 +312,26 @@ function filtered() {
   var q = document.getElementById('search').value.trim().toLowerCase();
   var fs = document.getElementById('f-status').value;
   var fa = document.getElementById('f-assign').value;
+  var fsexo = document.getElementById('f-sexo').value;
+  var fcoach = document.getElementById('f-coaching').value;
+  var fcorriente = document.getElementById('f-corriente').value.trim().toLowerCase();
+  var fespecialidad = document.getElementById('f-especialidad').value.trim().toLowerCase();
+  var fidiomas = document.getElementById('f-idiomas').value.trim().toLowerCase();
+  var fedadMin = document.getElementById('f-edad-min').value.trim();
+  var fedadMax = document.getElementById('f-edad-max').value.trim();
   return ALL.filter(function(ps){
     if (activePais && ps['Pais']!==activePais) return false;
     if (fs==='active' && (ps['Banned?']==1||ps['Pausa']==1)) return false;
     if (fs==='banned' && ps['Banned?']!=1) return false;
     if (fs==='paused' && ps['Pausa']!=1) return false;
     if (fa!=='' && String(ps['Assignment ON?'])!==fa) return false;
+    if (fsexo && (ps['Sexo']||'')!==fsexo) return false;
+    if (fcoach && (ps['Coaching']||'')!==fcoach) return false;
+    if (fcorriente && !(ps['Corriente']||'').toLowerCase().includes(fcorriente)) return false;
+    if (fespecialidad && !(ps['Especialidad']||'').toLowerCase().includes(fespecialidad)) return false;
+    if (fidiomas && !(ps['Idiomas']||'').toLowerCase().includes(fidiomas)) return false;
+    if (fedadMin && (ps['Edad']===''||parseFloat(ps['Edad'])<parseFloat(fedadMin))) return false;
+    if (fedadMax && (ps['Edad']===''||parseFloat(ps['Edad'])>parseFloat(fedadMax))) return false;
     if (q) return (ps['Therapist']||'').toLowerCase().includes(q)||(ps['Comentario']||'').toLowerCase().includes(q)||(ps['Especialidad']||'').toLowerCase().includes(q)||(ps['Ther. uuid']||'').toLowerCase().includes(q);
     return true;
   });
@@ -333,6 +369,14 @@ function render() {
     var cr3=ps['CR3 (%)']!==''?(parseFloat(ps['CR3 (%)'])*100).toFixed(0)+'%':'—';
     var ptj=ps['Puntaje Total']!==''?(parseFloat(ps['Puntaje Total'])*100).toFixed(0)+'%':'—';
     var com=ps['Comentario']?'<span style="color:var(--text2);font-size:12px">'+String(ps['Comentario']).substring(0,45)+(String(ps['Comentario']).length>45?'…':'')+'</span>':'';
+    var sexo=fmt(ps['Sexo']);
+    var corriente=ps['Corriente']?'<span style="font-size:12px">'+ps['Corriente']+'</span>':'';
+    var especialidad=ps['Especialidad']?'<span style="font-size:12px">'+String(ps['Especialidad']).substring(0,25)+'</span>':'';
+    var idiomas=ps['Idiomas']?'<span style="font-size:12px">'+ps['Idiomas']+'</span>':'';
+    var coaching=ps['Coaching']?'<span class="badge '+(ps['Coaching']==='Sí'?'b-on':'b-neutral')+'">'+ps['Coaching']+'</span>':'';
+    var edad=ps['Edad']?ps['Edad']:'';
+    var asign=ps['Asignaciones manuales']?'<span style="font-size:12px;color:#b45309">'+ps['Asignaciones manuales']+'</span>':'';
+    var motban=ps['Motivo de baneo']?'<span style="font-size:12px;color:#dc2626">'+String(ps['Motivo de baneo']).substring(0,30)+'</span>':'';
     return '<tr class="'+sel+'" data-uuid="'+ps['Ther. uuid']+'" onclick="openPanel(this.dataset.uuid)">'+
       '<td style="font-weight:500">'+fmt(ps['Therapist'])+'</td>'+
       '<td>'+(flags[ps['Pais']]||'')+' '+fmt(ps['Pais'])+'</td>'+
@@ -342,6 +386,14 @@ function render() {
       '<td style="text-align:center">'+cr3+'</td>'+
       '<td>'+estado+'</td>'+
       '<td>'+pausa+'</td>'+
+      '<td>'+sexo+'</td>'+
+      '<td>'+corriente+'</td>'+
+      '<td>'+especialidad+'</td>'+
+      '<td>'+idiomas+'</td>'+
+      '<td>'+coaching+'</td>'+
+      '<td style="text-align:center">'+edad+'</td>'+
+      '<td>'+asign+'</td>'+
+      '<td>'+motban+'</td>'+
       '<td>'+com+'</td>'+
     '</tr>';
   }).join('');
@@ -385,6 +437,7 @@ function openPanel(uuid) {
   document.getElementById('p-uuid').textContent=ps['Ther. uuid'];
   document.getElementById('p-url').href=ps['URL']||'#';
   document.getElementById('e-pausa').value=ps['Pausa']==1||ps['Pausa']==='1'?'1':'0';
+  document.getElementById('e-banned').value=ps['Banned?']==1||ps['Banned?']==='1'?'1':'0';
   document.getElementById('e-sexo').value=ps['Sexo']||'';
   document.getElementById('e-corriente').value=ps['Corriente']||'';
   document.getElementById('e-especialidad').value=ps['Especialidad']||'';
@@ -405,6 +458,7 @@ function closePanel(){ document.getElementById('panel').classList.remove('open')
 function saveManual(){
   if(!currentPS) return;
   currentPS['Pausa']=document.getElementById('e-pausa').value;
+  currentPS['Banned?']=document.getElementById('e-banned').value;
   currentPS['Sexo']=document.getElementById('e-sexo').value;
   currentPS['Corriente']=document.getElementById('e-corriente').value;
   currentPS['Especialidad']=document.getElementById('e-especialidad').value;
@@ -484,6 +538,36 @@ function readXLSX(file,cb){
     cb(XLSX.utils.sheet_to_json(ws,{defval:''}));
   };
   reader.readAsArrayBuffer(file);
+}
+
+
+
+function clearFilters() {
+  document.getElementById('search').value='';
+  document.getElementById('f-status').value='';
+  document.getElementById('f-assign').value='';
+  document.getElementById('f-sexo').value='';
+  document.getElementById('f-coaching').value='';
+  document.getElementById('f-corriente').value='';
+  document.getElementById('f-especialidad').value='';
+  document.getElementById('f-idiomas').value='';
+  document.getElementById('f-edad-min').value='';
+  document.getElementById('f-edad-max').value='';
+  render();
+}
+
+function exportXLSX() {
+  var res = filtered();
+  if (!res.length) { alert('No hay datos para exportar.'); return; }
+  var cols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Corriente','Especialidad','Idiomas','Coaching','Edad','Asignaciones manuales','Motivo de baneo','Comentario','NPS Ther.','Rapport','W5','W10','Ther. uuid'];
+  var rows = [cols];
+  res.forEach(function(ps) {
+    rows.push(cols.map(function(c){ return ps[c]!==undefined?ps[c]:''; }));
+  });
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'PS');
+  XLSX.writeFile(wb, 'PS_export_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){closePanel();closeUpload();}});
