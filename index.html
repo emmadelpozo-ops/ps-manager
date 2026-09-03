@@ -600,6 +600,14 @@ function processUpload(){
         var uuid_clean=String(uuid||'').trim();
         var m=manualSaved[uuid_clean]||{};
         MANUAL.forEach(function(k){ ps[k]=m[k]!==undefined?m[k]:''; });
+        // Force normalize numeric fields
+        var aon=ps['Assignment ON?'];
+        if(aon===true||aon==='true'||String(aon).trim()==='1'||aon===1||aon===1.0) ps['Assignment ON?']=1;
+        else if(aon===false||aon==='false'||String(aon).trim()==='0'||aon===0) ps['Assignment ON?']=0;
+        else ps['Assignment ON?']=parseFloat(aon)||0;
+        var banned=ps['Banned?'];
+        if(banned===true||String(banned).trim()==='1'||banned===1||banned===1.0) ps['Banned?']=1;
+        else ps['Banned?']=0;
         return ps;
       });
       // Apply extra Excel if provided
@@ -625,9 +633,7 @@ function processUpload(){
         }
       }
       saveToStorage();
-      // Debug: show first Assignment ON? value
-var debugVals = ALL.slice(0,3).map(function(p){ return p['Therapist'].split(' ')[0]+':'+p['Assignment ON?']+'('+typeof p['Assignment ON?']+')'; }).join(' | ');
-prog.textContent='✅ '+ALL.length+' PS. Debug Asign: '+debugVals;
+      prog.textContent='✅ '+ALL.length+' psicólogos actualizados correctamente.';
       setTimeout(function(){closeUpload();render();},1500);
     });
   });
@@ -636,9 +642,10 @@ prog.textContent='✅ '+ALL.length+' PS. Debug Asign: '+debugVals;
 function readXLSX(file,cb){
   var reader=new FileReader();
   reader.onload=function(e){
-    var wb=XLSX.read(e.target.result,{type:'array'});
+    var wb=XLSX.read(e.target.result,{type:'array',cellNF:false,raw:false});
     var ws=wb.Sheets[wb.SheetNames[0]];
-    cb(XLSX.utils.sheet_to_json(ws,{defval:''}));
+    var data=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
+    cb(data);
   };
   reader.readAsArrayBuffer(file);
 }
