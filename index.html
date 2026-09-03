@@ -363,7 +363,7 @@ function filtered() {
     if (fs==='active' && (ps['Banned?']==1||ps['Pausa']==1)) return false;
     if (fs==='banned' && ps['Banned?']!=1) return false;
     if (fs==='paused' && ps['Pausa']!=1) return false;
-    if (fa!=='' && String(parseFloat(ps['Assignment ON?']||0))!==fa) return false;
+    if (fa!=='' && String(isNaN(parseFloat(ps['Assignment ON?']))?0:parseFloat(ps['Assignment ON?']))!==fa) return false;
     if (fsexo && (ps['Sexo']||'')!==fsexo) return false;
     if (fcoach && (ps['Coaching']||'')!==fcoach) return false;
     if (fcorriente && !(ps['Corriente']||'').toLowerCase().includes(fcorriente)) return false;
@@ -401,7 +401,7 @@ function render() {
   var flags={ESP:'🇪🇸',UK:'🇬🇧',ITA:'🇮🇹','PT/BR':'🇵🇹',MX:'🇲🇽'};
   tbody.innerHTML=res.map(function(ps){
     var sel=currentPS&&currentPS['Ther. uuid']===ps['Ther. uuid']?'selected':'';
-    var assignVal=parseFloat(ps['Assignment ON?']||0); var asgn=assignVal===1?'<span class="badge b-on">ON</span>':'<span class="badge b-off">OFF</span>';
+    var assignVal=isNaN(parseFloat(ps['Assignment ON?']))?0:parseFloat(ps['Assignment ON?']); var asgn=assignVal===1?'<span class="badge b-on">ON</span>':'<span class="badge b-off">OFF</span>';
     var estado=ps['Banned?']==1?'<span class="badge b-ban">Baneado</span>':'<span class="badge b-on">Activo</span>';
     var pausa=ps['Pausa']==1||ps['Pausa']==='1'?'<span class="badge b-pause">Pausa</span>':'';
     var cr3=ps['CR3 (%)']!==''?(parseFloat(ps['CR3 (%)'])*100).toFixed(0)+'%':'—';
@@ -473,7 +473,7 @@ function openPanel(uuid) {
   document.getElementById('p-nps').textContent=pct(ps['NPS Ther.']);
   document.getElementById('p-w5').textContent=pct(ps['W5']);
   document.getElementById('p-w10').textContent=pct(ps['W10']);
-  document.getElementById('p-assign').textContent=parseFloat(ps['Assignment ON?']||0)===1?'✅ ON':'❌ OFF';
+  document.getElementById('p-assign').textContent=(isNaN(parseFloat(ps['Assignment ON?']))?0:parseFloat(ps['Assignment ON?']))===1?'✅ ON':'❌ OFF';
   document.getElementById('p-delta').textContent=fmt(ps['Delta (real)']);
   document.getElementById('p-trp').textContent=fmt(ps['TRP']);
   document.getElementById('p-avail').textContent=fmt(ps['Availability']);
@@ -485,7 +485,7 @@ function openPanel(uuid) {
   document.getElementById('p-url').href=ps['URL']||'#';
   document.getElementById('e-pausa').value=ps['Pausa']==1||ps['Pausa']==='1'?'1':'0';
   document.getElementById('e-banned').value=ps['Banned?']==1||ps['Banned?']==='1'?'1':'0';
-  document.getElementById('e-assign-on').value=parseFloat(ps['Assignment ON?']||0)===1?'1':'0';
+  document.getElementById('e-assign-on').value=(isNaN(parseFloat(ps['Assignment ON?']))?0:parseFloat(ps['Assignment ON?']))===1?'1':'0';
   document.getElementById('e-sexo').value=ps['Sexo']||'';
   document.getElementById('e-corriente').value=ps['Corriente']||'';
   document.getElementById('e-especialidad').value=ps['Especialidad']||'';
@@ -590,7 +590,7 @@ function processUpload(){
         ps['NPS Ther.']=rk['NPS Ther.']!==undefined?rk['NPS Ther.']:'';
         ps['Puntaje Total']=rk['Puntaje Total']!==undefined?rk['Puntaje Total']:'';
         ps['Lim. precio']=rk['Lim. precio']!==undefined?rk['Lim. precio']:'';
-        ps['Pais']=cmap[String(ps['L']||'').toLowerCase()]||cmap[String(ps['C']||'').toLowerCase()]||String(ps['L']||ps['C']||'').toUpperCase();
+        var _c=String(ps['C']||'').toLowerCase().trim(); var _l=String(ps['L']||'').toLowerCase().trim(); ps['Pais']=cmap[_c]||cmap[_l]||_c.toUpperCase();
         var uuid_clean=String(uuid||'').trim();
         var m=manualSaved[uuid_clean]||{};
         MANUAL.forEach(function(k){ ps[k]=m[k]!==undefined?m[k]:''; });
