@@ -124,8 +124,6 @@ tr.selected td{background:var(--accent-light)}
   <input id="f-corriente" type="text" placeholder="Corriente..." style="padding:6px 10px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:130px;outline:none" oninput="render()">
   <input id="f-especialidad" type="text" placeholder="Especialidad..." style="padding:6px 10px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:130px;outline:none" oninput="render()">
   <input id="f-idiomas" type="text" placeholder="Idioma..." style="padding:6px 10px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:110px;outline:none" oninput="render()">
-  <input id="f-edad-min" type="number" placeholder="Edad min" style="padding:6px 8px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:80px;outline:none" oninput="render()">
-  <input id="f-edad-max" type="number" placeholder="Edad max" style="padding:6px 8px;border:1px solid #e2e0d8;border-radius:6px;font-size:13px;width:80px;outline:none" oninput="render()">
   <button onclick="clearFilters()" style="background:#f0efe9;color:#666;border:1px solid #e2e0d8;padding:7px 12px;border-radius:6px;font-size:13px;cursor:pointer;white-space:nowrap">✕ Limpiar</button>
   <button onclick="exportXLSX()" style="background:#16a34a;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">⬇ Exportar Excel</button>
   <div class="hdr-right">
@@ -183,6 +181,9 @@ tr.selected td{background:var(--accent-light)}
         <div class="frow"><label>Estado</label>
           <select id="e-banned"><option value="0">Activo</option><option value="1">Baneado</option></select>
         </div>
+      </div>
+      <div class="frow"><label>Asignación (ON/OFF)</label>
+        <select id="e-assign-on"><option value="1">ON</option><option value="0">OFF</option></select>
       </div>
       <div class="frow"><label>Sexo</label>
         <select id="e-sexo"><option value="">—</option><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option><option value="No binario">No binario</option></select>
@@ -271,10 +272,10 @@ tr.selected td{background:var(--accent-light)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script>
 var ALL = JSON.parse(document.getElementById('ps-data').textContent);
-var MANUAL = ['Pausa','Banned?','Sexo','Corriente','Especialidad','Comentario','Asignaciones manuales','Idiomas','Coaching','Edad','Motivo de baneo'];
+var MANUAL = ['Pausa','Banned?','Assignment ON?','Sexo','Corriente','Especialidad','Comentario','Asignaciones manuales','Idiomas','Coaching','Edad','Motivo de baneo'];
 var sortCol = null, sortDir = 1, activePais = '', currentPS = null;
 var sortIds = ['s0','s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13','s14','s15'];
-var sortCols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Corriente','Especialidad','Idiomas','Coaching','Edad','Asignaciones manuales','Motivo de baneo'];
+var sortCols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Edad','Coaching','Corriente','Especialidad','Idiomas','Asignaciones manuales','Motivo de baneo'];
 var uploadedFiles = {ass:null,rank:null};
 
 function loadSaved() {
@@ -317,8 +318,6 @@ function filtered() {
   var fcorriente = document.getElementById('f-corriente').value.trim().toLowerCase();
   var fespecialidad = document.getElementById('f-especialidad').value.trim().toLowerCase();
   var fidiomas = document.getElementById('f-idiomas').value.trim().toLowerCase();
-  var fedadMin = document.getElementById('f-edad-min').value.trim();
-  var fedadMax = document.getElementById('f-edad-max').value.trim();
   return ALL.filter(function(ps){
     if (activePais && ps['Pais']!==activePais) return false;
     if (fs==='active' && (ps['Banned?']==1||ps['Pausa']==1)) return false;
@@ -330,8 +329,6 @@ function filtered() {
     if (fcorriente && !(ps['Corriente']||'').toLowerCase().includes(fcorriente)) return false;
     if (fespecialidad && !(ps['Especialidad']||'').toLowerCase().includes(fespecialidad)) return false;
     if (fidiomas && !(ps['Idiomas']||'').toLowerCase().includes(fidiomas)) return false;
-    if (fedadMin && (ps['Edad']===''||parseFloat(ps['Edad'])<parseFloat(fedadMin))) return false;
-    if (fedadMax && (ps['Edad']===''||parseFloat(ps['Edad'])>parseFloat(fedadMax))) return false;
     if (q) return (ps['Therapist']||'').toLowerCase().includes(q)||(ps['Comentario']||'').toLowerCase().includes(q)||(ps['Especialidad']||'').toLowerCase().includes(q)||(ps['Ther. uuid']||'').toLowerCase().includes(q);
     return true;
   });
@@ -387,11 +384,11 @@ function render() {
       '<td>'+estado+'</td>'+
       '<td>'+pausa+'</td>'+
       '<td>'+sexo+'</td>'+
+      '<td style="text-align:center">'+edad+'</td>'+
+      '<td>'+coaching+'</td>'+
       '<td>'+corriente+'</td>'+
       '<td>'+especialidad+'</td>'+
       '<td>'+idiomas+'</td>'+
-      '<td>'+coaching+'</td>'+
-      '<td style="text-align:center">'+edad+'</td>'+
       '<td>'+asign+'</td>'+
       '<td>'+motban+'</td>'+
       '<td>'+com+'</td>'+
@@ -438,6 +435,7 @@ function openPanel(uuid) {
   document.getElementById('p-url').href=ps['URL']||'#';
   document.getElementById('e-pausa').value=ps['Pausa']==1||ps['Pausa']==='1'?'1':'0';
   document.getElementById('e-banned').value=ps['Banned?']==1||ps['Banned?']==='1'?'1':'0';
+  document.getElementById('e-assign-on').value=ps['Assignment ON?']==1||ps['Assignment ON?']==='1'?'1':'0';
   document.getElementById('e-sexo').value=ps['Sexo']||'';
   document.getElementById('e-corriente').value=ps['Corriente']||'';
   document.getElementById('e-especialidad').value=ps['Especialidad']||'';
@@ -459,6 +457,7 @@ function saveManual(){
   if(!currentPS) return;
   currentPS['Pausa']=document.getElementById('e-pausa').value;
   currentPS['Banned?']=document.getElementById('e-banned').value;
+  currentPS['Assignment ON?']=document.getElementById('e-assign-on').value;
   currentPS['Sexo']=document.getElementById('e-sexo').value;
   currentPS['Corriente']=document.getElementById('e-corriente').value;
   currentPS['Especialidad']=document.getElementById('e-especialidad').value;
@@ -551,8 +550,6 @@ function clearFilters() {
   document.getElementById('f-corriente').value='';
   document.getElementById('f-especialidad').value='';
   document.getElementById('f-idiomas').value='';
-  document.getElementById('f-edad-min').value='';
-  document.getElementById('f-edad-max').value='';
   render();
 }
 
