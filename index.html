@@ -269,6 +269,32 @@ tr.selected td{background:var(--accent-light)}
         <p><strong>Ranking.xlsx</strong> — métricas y puntuaciones</p>
         <div class="ok" id="ok-rank"></div>
       </div>
+      <div class="uzone" onclick="document.getElementById('file-extra').click()" style="border-style:dashed;opacity:.85">
+        <input type="file" id="file-extra" accept=".xlsx,.csv" onchange="handleFile('extra',this)">
+        <div class="icon">➕</div>
+        <p><strong>Excel extra</strong> — opcional, para cruzar datos adicionales</p>
+        <div class="ok" id="ok-extra"></div>
+      </div>
+      <div id="extra-config" style="display:none;background:#f8f8f4;border:1px solid #e2e0d8;border-radius:8px;padding:12px;margin-top:4px">
+        <p style="font-size:12px;font-weight:600;color:#555;margin-bottom:10px">Configurar cruce de datos</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label style="font-size:11px;color:#666;display:block;margin-bottom:3px">Columna clave del Excel extra</label>
+            <select id="extra-key-col" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:13px">
+              <option value="">— selecciona —</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:#666;display:block;margin-bottom:3px">Cruzar con campo PS</label>
+            <select id="extra-match-field" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:13px">
+              <option value="Ther. uuid">UUID</option>
+              <option value="Therapist">Nombre</option>
+            </select>
+          </div>
+        </div>
+        <label style="font-size:11px;color:#666;display:block;margin-bottom:5px">Columnas a importar (marca las que quieras)</label>
+        <div id="extra-cols-list" style="display:flex;flex-wrap:wrap;gap:6px;max-height:100px;overflow-y:auto"></div>
+      </div>
       <div class="prog" id="prog"></div>
     </div>
     <div class="modal-foot">
@@ -283,10 +309,12 @@ tr.selected td{background:var(--accent-light)}
 <script>
 var ALL = JSON.parse(document.getElementById('ps-data').textContent);
 var MANUAL = ['Pausa','Banned?','Assignment ON?','Sexo','Corriente','Especialidad','Comentario','Asignaciones manuales','Idiomas','Coaching','Edad','Motivo de baneo'];
-var sortCol = null, sortDir = 1, activePais = '', currentPS = null;
+var sortCol = 0, sortDir = 1, activePais = '', currentPS = null;
 var sortIds = ['s0','s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13','s14','s15'];
 var sortCols = ['Therapist','Pais','Assignment ON?','Delta (real)','Puntaje Total','CR3 (%)','Banned?','Pausa','Sexo','Edad','Coaching','Corriente','Especialidad','Idiomas','Asignaciones manuales','Motivo de baneo'];
-var uploadedFiles = {ass:null,rank:null};
+var uploadedFiles = {ass:null,rank:null,extra:null};
+var extraData = [];
+var extraCols = [];
 
 function loadSaved() {
   try {
@@ -294,7 +322,7 @@ function loadSaved() {
     if (!s) return;
     var m = JSON.parse(s);
     ALL.forEach(function(ps) {
-      var u = ps['Ther. uuid'];
+      var u = String(ps['Ther. uuid']||'').trim();
       if (m[u]) MANUAL.forEach(function(k){ if(m[u][k]!==undefined) ps[k]=m[u][k]; });
     });
   } catch(e){}
@@ -333,7 +361,7 @@ function filtered() {
     if (fs==='active' && (ps['Banned?']==1||ps['Pausa']==1)) return false;
     if (fs==='banned' && ps['Banned?']!=1) return false;
     if (fs==='paused' && ps['Pausa']!=1) return false;
-    if (fa!=='' && String(ps['Assignment ON?'])!==fa) return false;
+    if (fa!=='' && String(parseFloat(ps['Assignment ON?']||0))!==fa) return false;
     if (fsexo && (ps['Sexo']||'')!==fsexo) return false;
     if (fcoach && (ps['Coaching']||'')!==fcoach) return false;
     if (fcorriente && !(ps['Corriente']||'').toLowerCase().includes(fcorriente)) return false;
@@ -356,7 +384,8 @@ function render() {
     });
   }
   // Tab counts
-  document.getElementById('tc-all').textContent='('+ALL.length+')';
+  var filteredAll=filtered();
+  document.getElementById('tc-all').textContent='('+filteredAll.length+')';
   ['ESP','UK','ITA','PT/BR','MX'].forEach(function(p){
     var id='tc-'+(p==='PT/BR'?'PTBR':p);
     var el=document.getElementById(id);
@@ -370,7 +399,7 @@ function render() {
   var flags={ESP:'🇪🇸',UK:'🇬🇧',ITA:'🇮🇹','PT/BR':'🇵🇹',MX:'🇲🇽'};
   tbody.innerHTML=res.map(function(ps){
     var sel=currentPS&&currentPS['Ther. uuid']===ps['Ther. uuid']?'selected':'';
-    var asgn=ps['Assignment ON?']==1?'<span class="badge b-on">ON</span>':'<span class="badge b-off">OFF</span>';
+    var assignVal=parseFloat(ps['Assignment ON?']||0); var asgn=assignVal===1?'<span class="badge b-on">ON</span>':'<span class="badge b-off">OFF</span>';
     var estado=ps['Banned?']==1?'<span class="badge b-ban">Baneado</span>':'<span class="badge b-on">Activo</span>';
     var pausa=ps['Pausa']==1||ps['Pausa']==='1'?'<span class="badge b-pause">Pausa</span>':'';
     var cr3=ps['CR3 (%)']!==''?(parseFloat(ps['CR3 (%)'])*100).toFixed(0)+'%':'—';
@@ -440,7 +469,7 @@ function openPanel(uuid) {
   document.getElementById('p-nps').textContent=pct(ps['NPS Ther.']);
   document.getElementById('p-w5').textContent=pct(ps['W5']);
   document.getElementById('p-w10').textContent=pct(ps['W10']);
-  document.getElementById('p-assign').textContent=ps['Assignment ON?']==1?'✅ ON':'❌ OFF';
+  document.getElementById('p-assign').textContent=parseFloat(ps['Assignment ON?']||0)===1?'✅ ON':'❌ OFF';
   document.getElementById('p-delta').textContent=fmt(ps['Delta (real)']);
   document.getElementById('p-trp').textContent=fmt(ps['TRP']);
   document.getElementById('p-avail').textContent=fmt(ps['Availability']);
@@ -452,7 +481,7 @@ function openPanel(uuid) {
   document.getElementById('p-url').href=ps['URL']||'#';
   document.getElementById('e-pausa').value=ps['Pausa']==1||ps['Pausa']==='1'?'1':'0';
   document.getElementById('e-banned').value=ps['Banned?']==1||ps['Banned?']==='1'?'1':'0';
-  document.getElementById('e-assign-on').value=ps['Assignment ON?']==1||ps['Assignment ON?']==='1'?'1':'0';
+  document.getElementById('e-assign-on').value=parseFloat(ps['Assignment ON?']||0)===1?'1':'0';
   document.getElementById('e-sexo').value=ps['Sexo']||'';
   document.getElementById('e-corriente').value=ps['Corriente']||'';
   document.getElementById('e-especialidad').value=ps['Especialidad']||'';
@@ -494,9 +523,12 @@ function saveManual(){
 function openUpload(){ document.getElementById('upload-modal').classList.add('open'); }
 function closeUpload(){
   document.getElementById('upload-modal').classList.remove('open');
-  uploadedFiles={ass:null,rank:null};
+  uploadedFiles={ass:null,rank:null,extra:null};
+  extraData=[]; extraCols=[];
   document.getElementById('ok-ass').textContent='';
   document.getElementById('ok-rank').textContent='';
+  document.getElementById('ok-extra').textContent='';
+  document.getElementById('extra-config').style.display='none';
   document.getElementById('proc-btn').disabled=true;
   document.getElementById('prog').style.display='none';
 }
@@ -506,6 +538,24 @@ function handleFile(type,input){
   uploadedFiles[type]=file;
   document.getElementById('ok-'+type).textContent='✓ '+file.name;
   if(uploadedFiles.ass&&uploadedFiles.rank) document.getElementById('proc-btn').disabled=false;
+  if(type==='extra'){
+    readXLSX(file,function(data){
+      extraData=data;
+      if(!data.length) return;
+      extraCols=Object.keys(data[0]);
+      // Populate key col selector
+      var sel=document.getElementById('extra-key-col');
+      sel.innerHTML='<option value="">— selecciona —</option>';
+      extraCols.forEach(function(c){ sel.innerHTML+='<option value="'+c+'">'+c+'</option>'; });
+      // Populate columns checkboxes
+      var list=document.getElementById('extra-cols-list');
+      list.innerHTML='';
+      extraCols.forEach(function(c){
+        list.innerHTML+='<label style="font-size:12px;display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #e2e0d8;padding:3px 8px;border-radius:20px;cursor:pointer"><input type="checkbox" value="'+c+'" style="margin:0"> '+c+'</label>';
+      });
+      document.getElementById('extra-config').style.display='block';
+    });
+  }
 }
 
 function processUpload(){
@@ -520,7 +570,7 @@ function processUpload(){
       rankData.forEach(function(r){ if(r['Ther. uuid']) rankMap[r['Ther. uuid']]=r; });
       var manualSaved={};
       ALL.forEach(function(ps){
-        var u=ps['Ther. uuid']; manualSaved[u]={};
+        var u=String(ps['Ther. uuid']||'').trim(); if(!u) return; manualSaved[u]={};
         MANUAL.forEach(function(k){ manualSaved[u][k]=ps[k]; });
       });
       ALL=assData.filter(function(r){return r['Ther. uuid'];}).map(function(r){
@@ -534,11 +584,27 @@ function processUpload(){
         ps['NPS Ther.']=rk['NPS Ther.']!==undefined?rk['NPS Ther.']:'';
         ps['Puntaje Total']=rk['Puntaje Total']!==undefined?rk['Puntaje Total']:'';
         ps['Lim. precio']=rk['Lim. precio']!==undefined?rk['Lim. precio']:'';
-        ps['Pais']=cmap[String(ps['L']||'').toLowerCase()]||String(ps['L']||'').toUpperCase();
-        var m=manualSaved[uuid]||{};
+        ps['Pais']=cmap[String(ps['L']||'').toLowerCase()]||cmap[String(ps['C']||'').toLowerCase()]||String(ps['L']||ps['C']||'').toUpperCase();
+        var uuid_clean=String(uuid||'').trim();
+        var m=manualSaved[uuid_clean]||{};
         MANUAL.forEach(function(k){ ps[k]=m[k]!==undefined?m[k]:''; });
         return ps;
       });
+      // Apply extra Excel if provided
+      if(extraData.length){
+        var keyCol=document.getElementById('extra-key-col').value;
+        var matchField=document.getElementById('extra-match-field').value;
+        var checkedCols=Array.from(document.querySelectorAll('#extra-cols-list input:checked')).map(function(i){return i.value;});
+        if(keyCol && checkedCols.length){
+          var extraMap={};
+          extraData.forEach(function(r){ if(r[keyCol]!==undefined) extraMap[String(r[keyCol]).trim()]=r; });
+          ALL.forEach(function(ps){
+            var matchVal=String(ps[matchField]||'').trim();
+            var match=extraMap[matchVal];
+            if(match) checkedCols.forEach(function(c){ if(match[c]!==undefined&&match[c]!=='') ps[c]=match[c]; });
+          });
+        }
+      }
       saveToStorage();
       prog.textContent='✅ '+ALL.length+' psicólogos actualizados correctamente.';
       setTimeout(function(){closeUpload();render();},1500);
@@ -586,6 +652,7 @@ function exportXLSX() {
 
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){closePanel();closeUpload();}});
 loadSaved();
+document.getElementById('s0').textContent=' ↑';
 render();
 </script>
 </body>
