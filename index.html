@@ -265,28 +265,9 @@ tr.selected td{background:var(--accent-light)}
       <div class="uzone" onclick="document.getElementById('file-extra').click()" style="border-style:dashed;opacity:.85">
         <input type="file" id="file-extra" accept=".xlsx,.csv" onchange="handleFile('extra',this)">
         <div class="icon">➕</div>
-        <p><strong>Excel extra</strong> — opcional, para cruzar datos adicionales</p>
+        <p><strong>Excel extra</strong> — opcional (Edad, Coaching, Corriente, Especialidad, Idiomas, Menores)</p>
+        <p style="font-size:11px;color:#888;margin-top:4px">Se cruza automáticamente por Ther. uuid</p>
         <div class="ok" id="ok-extra"></div>
-      </div>
-      <div id="extra-config" style="display:none;background:#f8f8f4;border:1px solid #e2e0d8;border-radius:8px;padding:12px;margin-top:4px">
-        <p style="font-size:12px;font-weight:600;color:#555;margin-bottom:10px">Configurar cruce de datos</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <label style="font-size:11px;color:#666;display:block;margin-bottom:3px">Columna clave del Excel extra</label>
-            <select id="extra-key-col" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:13px">
-              <option value="">— selecciona —</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;color:#666;display:block;margin-bottom:3px">Cruzar con campo PS</label>
-            <select id="extra-match-field" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:13px">
-              <option value="Ther. uuid">UUID</option>
-              <option value="Therapist">Nombre</option>
-            </select>
-          </div>
-        </div>
-        <label style="font-size:11px;color:#666;display:block;margin-bottom:5px">Columnas a importar (marca las que quieras)</label>
-        <div id="extra-cols-list" style="display:flex;flex-wrap:wrap;gap:6px;max-height:100px;overflow-y:auto"></div>
       </div>
       <div class="prog" id="prog"></div>
     </div>
@@ -529,7 +510,6 @@ function closeUpload(){
   document.getElementById('ok-ass').textContent='';
   document.getElementById('ok-rank').textContent='';
   document.getElementById('ok-extra').textContent='';
-  document.getElementById('extra-config').style.display='none';
   document.getElementById('proc-btn').disabled=true;
   document.getElementById('prog').style.display='none';
 }
@@ -542,19 +522,6 @@ function handleFile(type,input){
   if(type==='extra'){
     readXLSX(file,function(data){
       extraData=data;
-      if(!data.length) return;
-      extraCols=Object.keys(data[0]);
-      // Populate key col selector
-      var sel=document.getElementById('extra-key-col');
-      sel.innerHTML='<option value="">— selecciona —</option>';
-      extraCols.forEach(function(c){ sel.innerHTML+='<option value="'+c+'">'+c+'</option>'; });
-      // Populate columns checkboxes
-      var list=document.getElementById('extra-cols-list');
-      list.innerHTML='';
-      extraCols.forEach(function(c){
-        list.innerHTML+='<label style="font-size:12px;display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #e2e0d8;padding:3px 8px;border-radius:20px;cursor:pointer"><input type="checkbox" value="'+c+'" style="margin:0"> '+c+'</label>';
-      });
-      document.getElementById('extra-config').style.display='block';
     });
   }
 }
@@ -613,27 +580,29 @@ function processUpload(){
         if(ps['Banned?']!==1) ps['Banned?']=0;
         return ps;
       });
-      // Apply extra Excel if provided
+      // Apply extra Excel — auto-cross by Ther. uuid
       if(extraData.length){
-        var keyCol=document.getElementById('extra-key-col').value;
-        var matchField=document.getElementById('extra-match-field').value;
-        var checkedCols=Array.from(document.querySelectorAll('#extra-cols-list input:checked')).map(function(i){return i.value;});
-        if(keyCol && checkedCols.length){
-          var extraMap={};
-          extraData.forEach(function(r){ if(r[keyCol]!==undefined) extraMap[String(r[keyCol]).trim()]=r; });
-          ALL.forEach(function(ps){
-            var matchVal=String(ps[matchField]||'').trim();
-            var match=extraMap[matchVal];
-            if(match) checkedCols.forEach(function(c){
+        var extraMap={};
+        extraData.forEach(function(r){
+          var uuid=String(r['Ther. uuid']||r['ther. uuid']||r['UUID']||r['uuid']||'').trim();
+          if(uuid) extraMap[uuid]=r;
+        });
+        var extraCols2=['EDAD','Coaching','Corriente','Especialidad','Idiomas','Menores'];
+        var colMap={'EDAD':'Edad','Coaching':'Coaching','Corriente':'Corriente','Especialidad':'Especialidad','Idiomas':'Idiomas','Menores':'Menores'};
+        ALL.forEach(function(ps){
+          var uuid=String(ps['Ther. uuid']||'').trim();
+          var match=extraMap[uuid];
+          if(match){
+            extraCols2.forEach(function(c){
               var val=match[c];
-              if(val!==undefined&&val!==''){
-                // Normalize column names from Overview Excel
-                var targetCol = c==='EDAD'?'Edad':c;
+              // Only fill if not already set manually
+              var targetCol=colMap[c]||c;
+              if(val!==undefined&&val!==null&&val!==''){
                 ps[targetCol]=val;
               }
             });
-          });
-        }
+          }
+        });
       }
       saveToStorage();
       prog.textContent='✅ '+ALL.length+' psicólogos actualizados correctamente.';
