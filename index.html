@@ -147,7 +147,7 @@ tr.selected td{background:var(--accent-light)}
     <th onclick="sortBy(2)" style="min-width:60px">Delta <span id="s3"></span></th>
     <th onclick="sortBy(3)" style="min-width:80px">Ranking <span id="s4"></span></th>
     <th onclick="sortBy(4)" style="min-width:65px">CR3 <span id="s5"></span></th>
-    <th onclick="sortBy(5)" style="min-width:80px">Estado <span id="s6"></span></th>
+    <th onclick="sortBy(5)" style="min-width:80px">Banned <span id="s6"></span></th>
     <th onclick="sortBy(6)" style="min-width:65px">Pausa <span id="s7"></span></th>
     <th onclick="sortBy(7)" style="min-width:80px">Sexo <span id="s8"></span></th>
     <th onclick="sortBy(9)" style="min-width:55px">Edad <span id="s9"></span></th>
@@ -381,7 +381,7 @@ function render() {
   tbody.innerHTML=res.map(function(ps){
     var sel=currentPS&&currentPS['Ther. uuid']===ps['Ther. uuid']?'selected':'';
     var _araw=ps['Assignment ON?']; var _aon=isON(_araw); var asgn=_aon?'<span class="badge b-on">SÍ</span>':'<span class="badge b-off">NO</span>';
-    var bannedVal=ps['Banned?']; var isBanned=(bannedVal===1||bannedVal==='1'||bannedVal===true||String(bannedVal).trim()==='1'); var estado=isBanned?'<span class="badge b-ban">Sí</span>':'<span class="badge b-on">No</span>';
+    var isBanned=(ps['Banned?']==='1'||ps['Banned?']===1); var estado=isBanned?'<span class="badge b-ban">Baneado</span>':'<span class="badge b-on">Activo</span>';
     var pausa=ps['Pausa']==1||ps['Pausa']==='1'?'<span class="badge b-pause">Pausa</span>':'';
     var cr3=ps['CR3 (%)']!==''?(parseFloat(ps['CR3 (%)'])*100).toFixed(0)+'%':'—';
     var ptj=ps['Puntaje Total']!==''?(parseFloat(ps['Puntaje Total'])*100).toFixed(0)+'%':'—';
@@ -455,14 +455,14 @@ function openPanel(uuid) {
   document.getElementById('p-delta').textContent=fmt(ps['Delta (real)']);
   document.getElementById('p-trp').textContent=fmt(ps['TRP']);
   document.getElementById('p-avail').textContent=fmt(ps['Availability']);
-  var _b=ps['Banned?']; document.getElementById('p-banned').textContent=(_b===1||_b==='1'||String(_b).trim()==='1')?'⛔ Sí':'No';
+  document.getElementById('p-banned').textContent=(ps['Banned?']==='1'||ps['Banned?']===1)?'⛔ Baneado':'Activo';
   document.getElementById('p-lim').textContent=fmt(ps['Lim. precio']);
   document.getElementById('p-trial').textContent=ps['Trial?']==1?'✅ Sí':'No';
   document.getElementById('p-stripe').textContent=ps['Stripe?']==1?'✅ Sí':ps['Stripe?']==-1?'❌ No':'—';
   document.getElementById('p-uuid').textContent=ps['Ther. uuid'];
   document.getElementById('p-url').href=ps['URL']||'#';
   document.getElementById('e-pausa').value=ps['Pausa']==1||ps['Pausa']==='1'?'1':'0';
-  var _bv=ps['Banned?']; document.getElementById('e-banned').value=(_bv===1||_bv==='1'||String(_bv).trim()==='1')?'1':'0';
+  document.getElementById('e-banned').value=(ps['Banned?']==='1'||ps['Banned?']===1)?'1':'0';
   document.getElementById('e-sexo').value=ps['Sexo']||'';
   document.getElementById('e-corriente').value=ps['Corriente']||'';
   document.getElementById('e-especialidad').value=ps['Especialidad']||'';
@@ -484,7 +484,7 @@ function closePanel(){ document.getElementById('panel').classList.remove('open')
 function saveManual(){
   if(!currentPS) return;
   currentPS['Pausa']=document.getElementById('e-pausa').value;
-  currentPS['Banned?']=document.getElementById('e-banned').value;
+  currentPS['Banned?']=document.getElementById('e-banned').value==='1'?'1':'0';
   currentPS['Sexo']=document.getElementById('e-sexo').value;
   currentPS['Corriente']=document.getElementById('e-corriente').value;
   currentPS['Especialidad']=document.getElementById('e-especialidad').value;
@@ -538,10 +538,6 @@ function processUpload(){
         var v=r['Assignment ON?'];
         var vv=(v===null||v===undefined)?'':v;
         r['Assignment ON?']=(vv===1||vv===true||String(vv).trim()==='1'||String(vv).trim()==='1.0')?1:0;
-        // Banned?
-        var b=r['Banned?'];
-        var bb=(b===null||b===undefined)?'':b;
-        r['Banned?']=(bb===1||bb===true||String(bb).trim()==='1'||String(bb).trim()==='1.0')?1:0;
       });
       prog.textContent='Cruzando datos y conservando campos manuales...';
       var cmap={es:'ESP',mx:'MX',gb:'UK',en:'UK',pt:'PT/BR',br:'PT/BR',it:'ITA'};
@@ -577,7 +573,8 @@ function processUpload(){
         MANUAL.forEach(function(k){ ps[k]=m[k]!==undefined?m[k]:''; });
         // Already normalized in pre-process step above, just keep as is
         if(ps['Assignment ON?']!==1) ps['Assignment ON?']=0;
-        if(ps['Banned?']!==1) ps['Banned?']=0;
+        // Banned? comes from Excel — already normalized as 0 or 1 by readXLSX
+        ps['Banned?']=r['Banned?']===1?'1':'0';
         return ps;
       });
       // Apply extra Excel — auto-cross by Ther. uuid
@@ -616,26 +613,41 @@ function readXLSX(file,cb){
   reader.onload=function(e){
     var wb=XLSX.read(e.target.result,{type:'array',cellDates:false,cellNF:false,cellText:false});
     var ws=wb.Sheets[wb.SheetNames[0]];
-    // Use header row to get column names
     var ref=ws['!ref'];
     var range=XLSX.utils.decode_range(ref);
-    // Read header row
+    // Read headers
     var headers={};
     for(var C=range.s.c;C<=range.e.c;C++){
       var hcell=ws[XLSX.utils.encode_cell({r:range.s.r,c:C})];
-      if(hcell&&hcell.v!==undefined) headers[C]=String(hcell.v);
+      if(hcell&&hcell.v!==undefined) headers[C]=String(hcell.v).trim();
     }
-    // Build data array reading raw .v values
+    // Numeric columns that must be read as integers
+    var numCols={'Banned?':1,'Assignment ON?':1,'Trial?':1,'Stripe?':1,'VAT?':1,'Delta (real)':1,'TRP':1};
+    // Build rows reading raw .v directly
     var data=[];
     for(var R=range.s.r+1;R<=range.e.r;R++){
       var row={};
+      var hasData=false;
       for(var CC=range.s.c;CC<=range.e.c;CC++){
         var hname=headers[CC];
         if(!hname) continue;
-        var cell=ws[XLSX.utils.encode_cell({r:R,c:CC})];
-        row[hname]=cell?cell.v:'';
+        var cellAddr=XLSX.utils.encode_cell({r:R,c:CC});
+        var cell=ws[cellAddr];
+        if(cell===undefined){
+          row[hname]='';
+        } else {
+          var v=cell.v;
+          if(numCols[hname]){
+            // Force to number
+            var n=Number(v);
+            row[hname]=isNaN(n)?0:Math.round(n);
+          } else {
+            row[hname]=(v===undefined||v===null)?'':v;
+          }
+          if(v!==undefined&&v!==null&&v!=='') hasData=true;
+        }
       }
-      data.push(row);
+      if(hasData) data.push(row);
     }
     cb(data);
   };
